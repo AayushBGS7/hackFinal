@@ -1,0 +1,47 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+
+# Environment files (secrets)
+.env
+.env.local
+
+# Large model files (> 100 MB GitHub limit)
+ppklfiles/vit_mri_weights.pkl
+
+# Temp directories
+temp_uploads/
+temp_audio/
+test_samples/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Stitch exports (not needed for deployment)
+stitch_smart_medical_interpreter*/
+
+# Logs
+*.log
+npm-debug.log*

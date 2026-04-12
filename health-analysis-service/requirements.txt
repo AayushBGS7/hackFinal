@@ -1,0 +1,16 @@
+flask
+flask-cors
+python-dotenv
+google-generativeai
+pytesseract
+Pillow
+pdf2image
+torch
+torchvision
+torchxrayvision
+gtts
+numpy
+scikit-learn
+xgboost
+transformers
+tensorflow

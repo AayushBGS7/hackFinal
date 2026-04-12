@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Health Saathi — AI-powered medical report analysis, health predictions, and intelligent health insights at your fingertips." />
+    <title>Health Saathi — Smart Medical Interpreter</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#1e667f',
+              'primary-dim': '#075a72',
+              'primary-container': '#bde9ff',
+              'on-primary': '#f0f9ff',
+              'on-primary-container': '#055972',
+              surface: '#f8fafb',
+              'surface-container-lowest': '#ffffff',
+              'surface-container-low': '#f0f4f6',
+              'surface-container': '#e8eff1',
+              'surface-container-high': '#e1eaed',
+              'surface-container-highest': '#d9e4e8',
+              'on-surface': '#2a3437',
+              'on-surface-variant': '#566164',
+              'outline-variant': '#a9b4b7',
+            },
+            fontFamily: {
+              headline: ['Manrope', 'sans-serif'],
+              body: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+

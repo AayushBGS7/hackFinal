@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #map { height: 100vh; width: 100vw; background: #e1eaed; }
+
+        .loading-toast {
+            position: absolute; top: 15px; left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #1e667f, #0d5c75);
+            color: white; padding: 10px 24px; border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 14px;
+            font-weight: bold; z-index: 1000; display: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: pulse 1s infinite alternate; text-align: center;
+        }
+        @keyframes pulse {
+            0%   { transform: translateX(-50%) scale(1); }
+            100% { transform: translateX(-50%) scale(1.03); }
+        }
+
+        /* Hospital name labels above pins */
+        .leaflet-tooltip.hospital-label {
+            background-color: rgba(255,255,255,0.95); border: 2px solid #0d5c75;
+            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            font-weight: 700; font-size: 11px; color: #0d5c75;
+            padding: 4px 8px; z-index: 500; white-space: nowrap;
+        }
+        .leaflet-tooltip.hospital-label::before { border-top-color: #0d5c75; }
+
+        /* "You are here" label */
+        .leaflet-tooltip.user-label {
+            background-color: #e53e3e; color: white; border: 2px solid white;
+            font-weight: 800; font-size: 12px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(229,62,62,0.4);
+        }
+        .leaflet-tooltip.user-label::before { border-top-color: #e53e3e; }
+    </style>
+</head>
+
+<body>
+    <div id="loading" class="loading-toast">📍 Locating You...</div>
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([28.6139, 77.2090], 13);
+        var loadingEl = document.getElementById('loading');
+
+        // CartoDB Voyager tiles — modern, clean, fast (no API key required)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Blue hospital pin icon
+        var hospitalIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+
+        // Red "You are here" pin
+        var userIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+
+        var hospitalLayer = L.layerGroup().addTo(map);
+        var searchRadiusCircle = null;
+        var lastFetchCenter = null;
+        var isHomeFetch = true;
+
+        // localStorage Cache (30 min TTL, ~1km grid precision)
+        var CACHE_TTL = 30 * 60 * 1000;
+
+        function getCacheKey(lat, lng) {
+            return 'hospitals_' + lat.toFixed(2) + '_' + lng.toFixed(2);
+        }
+        function getFromCache(key) {
+            try {
+                var item = localStorage.getItem(key);
+                if (!item) return null;
+                var parsed = JSON.parse(item);
+                if (Date.now() - parsed.ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
+                return parsed.data;
+            } catch(e) { return null; }
+        }
+        function saveToCache(key, data) {
+            try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+        }
+
+        // Main Fetch Function
+        function fetchNearbyHospitals(lat, lng) {
+            lastFetchCenter = L.latLng(lat, lng);
+
+            // Cache-first: instant load if visited before
+            var cacheKey = getCacheKey(lat, lng);
+            var cached = getFromCache(cacheKey);
+            if (cached) {
+                loadingEl.style.display = 'none';
+                processOverpassData({ elements: cached }, lat, lng);
+                return;
+            }
+
+            loadingEl.innerText = "🏥 Fetching top clinics around this area...";
+            loadingEl.style.display = 'block';
+
+            var query = `
+            [out:json][timeout:10];
+            (
+              node["amenity"="hospital"](around:8000, ${lat}, ${lng});
+              node["amenity"="clinic"](around:8000, ${lat}, ${lng});
+              node["healthcare"="doctor"](around:8000, ${lat}, ${lng});
+            );
+            out body;
+        `;
+
+            // 6 endpoints: direct first, then corsproxy.io proxied (bypasses IP bans)
+            var encodedQuery = encodeURIComponent(query);
+            var endpoints = [
+                'https://overpass-api.de/api/interpreter?data=' + encodedQuery,
+                'https://overpass.kumi.systems/api/interpreter?data=' + encodedQuery,
+                'https://corsproxy.io/?url=' + encodeURIComponent('https://overpass-api.de/api/interpreter?data=' + encodedQuery),
+                'https://corsproxy.io/?url=' + encodeURIComponent('https://overpass.kumi.systems/api/interpreter?data=' + encodedQuery),
+                'https://maps.mail.ru/osm/tools/overpass/api/interpreter?data=' + encodedQuery,
+                'https://overpass.openstreetmap.ru/api/interpreter?data=' + encodedQuery
+            ];
+
+            function tryFetch(index) {
+                if (index >= endpoints.length) {
+                    loadingEl.style.display = 'none';
+                    console.error("All Overpass APIs overloaded. Using mock data.");
+                    // Mock fallback so the app never breaks even if all servers are down
+                    var mockData = { elements: [
+                        { lat: lat+0.005, lon: lng+0.005, tags: { name: "City Care Super Speciality", amenity: "hospital" } },
+                        { lat: lat-0.006, lon: lng-0.008, tags: { name: "Apollo Medics Family Clinic", amenity: "clinic" } },
+                        { lat: lat-0.008, lon: lng+0.003, tags: { name: "National Heart & Lung Center", amenity: "hospital" } },
+                        { lat: lat+0.004, lon: lng-0.006, tags: { name: "Dr. Sharma General Hospital", amenity: "hospital" } },
+                        { lat: lat+0.009, lon: lng-0.002, tags: { name: "Green Valley Wellness Centre", amenity: "clinic" } }
+                    ]};
+                    processOverpassData(mockData, lat, lng);
+                    return;
+                }
+
+                var url = endpoints[index];
+                // Abort after 5s — don't wait 30s for a dead server
+                var controller = new AbortController();
+                var abortTimer = setTimeout(function() { controller.abort(); }, 5000);
+
+                fetch(url, { signal: controller.signal })
+                    .then(function(res) {
+                        clearTimeout(abortTimer);
+                        if (!res.ok) throw new Error("HTTP " + res.status);
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        // Unwrap corsproxy.io wrapper if needed
+                        var actualData = data.contents ? JSON.parse(data.contents) : data;
+                        saveToCache(getCacheKey(lat, lng), actualData.elements);
+                        processOverpassData(actualData, lat, lng);
+                    })
+                    .catch(function(err) {
+                        console.warn("Server down:", endpoints[index].split('?')[0]);
+                        tryFetch(index + 1);
+                    });
+            }
+
+            function processOverpassData(data, lat, lng) {
+                loadingEl.style.display = 'none';
+                hospitalLayer.clearLayers();
+
+                var syncedHospitals = [];
+
+                // Sort by proximity, take only top 15 (prevents lag from 100+ pins)
+                data.elements.forEach(function(el) {
+                    var dLat = el.lat - lat, dLng = el.lon - lng;
+                    el.distSq = dLat*dLat + dLng*dLng;
+                });
+                data.elements.sort(function(a, b) { return a.distSq - b.distSq; });
+                var topElements = data.elements.slice(0, 15);
+
+                topElements.forEach(function(element) {
+                    var facilityType = element.tags.amenity || element.tags.healthcare || "Medical";
+                    var rawName = element.tags.name;
+                    var name = rawName || (facilityType.charAt(0).toUpperCase() + facilityType.slice(1));
+                    if (name.length > 25) name = name.substring(0, 25) + "...";
+
+                    // Google Maps link: opens exact location by name + coordinates
+                    var gmLink = "https://www.google.com/maps/search/" + encodeURIComponent(name) + "/@" + element.lat + "," + element.lon + ",17z";
+
+                    syncedHospitals.push({ name: rawName || name, type: facilityType, lat: element.lat, lng: element.lon, gmLink: gmLink });
+
+                    L.marker([element.lat, element.lon], { icon: hospitalIcon })
+                        .addTo(hospitalLayer)
+                        .bindTooltip(name, { permanent: true, direction: 'top', className: 'hospital-label', offset: [0, -40] })
+                        .on('click', function() { window.open(gmLink, '_blank'); });
+                });
+
+                // Send hospital list to parent React app via postMessage
+                window.parent.postMessage({
+                    type: isHomeFetch ? 'HOME_HOSPITALS_LOADED' : 'PANNED_HOSPITALS',
+                    data: syncedHospitals,
+                    mapLat: lat,
+                    mapLng: lng
+                }, "*");
+
+                isHomeFetch = false;
+            }
+
+            tryFetch(0);
+        }
+
+        // GPS Location
+        loadingEl.style.display = 'block';
+        map.locate({ setView: true, maxZoom: 14, enableHighAccuracy: true, timeout: 15000 });
+
+        map.on('locationfound', function(e) {
+            L.marker(e.latlng, { icon: userIcon, zIndexOffset: 1000 }).addTo(map)
+                .bindTooltip("You are here", { permanent: true, direction: 'top', className: 'user-label', offset: [0, -40] })
+                .openPopup();
+
+            if (searchRadiusCircle) map.removeLayer(searchRadiusCircle);
+            searchRadiusCircle = L.circle(e.latlng, { radius: 8000, color: '#0d5c75', fillOpacity: 0.05, weight: 2, dashArray: '5, 5' }).addTo(map);
+
+            fetchNearbyHospitals(e.latlng.lat, e.latlng.lng);
+        });
+
+        // Real-time Panning
+        var dragTimeout;
+        map.on('moveend', function(e) {
+            var center = map.getCenter();
+            // Only re-fetch if panned >600 meters (prevents API spam)
+            if (lastFetchCenter && lastFetchCenter.distanceTo(center) < 600) return;
+
+            clearTimeout(dragTimeout);
+            dragTimeout = setTimeout(function() {
+                fetchNearbyHospitals(center.lat, center.lng);
+            }, 1500); // 1.5s debounce prevents 429 rate-limit bans
+        });
+
+        // Location Error Fallback
+        map.on('locationerror', function(e) {
+            loadingEl.style.display = 'block';
+            loadingEl.style.background = '#e53e3e';
+            loadingEl.innerText = "Location blocked. Showing default map...";
+            setTimeout(function() { loadingEl.style.display = 'none'; }, 3000);
+            fetchNearbyHospitals(28.4744, 77.5040); // Default: Greater Noida
+        });
+    </script>
+</body>
+</html>

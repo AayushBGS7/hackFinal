@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rural Health Analysis — Test UI</title>
+    <style>
+        /* ============================================
+           Base Styles & CSS Variables
+           ============================================ */
+        :root {
+            --bg-primary: #0f1117;
+            --bg-card: #1a1d27;
+            --bg-card-hover: #22263a;
+            --bg-input: #14161e;
+            --border: #2a2e3d;
+            --border-focus: #6366f1;
+            --text-primary: #e8eaf0;
+            --text-secondary: #8b8fa3;
+            --text-muted: #5c6078;
+            --accent-indigo: #6366f1;
+            --accent-indigo-glow: rgba(99, 102, 241, 0.15);
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-sky: #38bdf8;
+            --gradient-primary: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --gradient-emerald: linear-gradient(135deg, #10b981, #34d399);
+            --gradient-amber: linear-gradient(135deg, #f59e0b, #fbbf24);
+            --gradient-red: linear-gradient(135deg, #ef4444, #f87171);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+            --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.08);
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ============================================
+           Animated Background
+           ============================================ */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ============================================
+           Layout
+           ============================================ */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 32px 20px 60px;
+        }
+
+        /* ============================================
+           Header
+           ============================================ */
+        .header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .header-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-primary);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #e8eaf0, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        /* ============================================
+           Status Banner
+           ============================================ */
+        .status-banner {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 12px 18px;
+            font-size: 13px;
+            color: #a5b4fc;
+            text-align: center;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-indigo);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        /* ============================================
+           Section Cards
+           ============================================ */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-card);
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .section:hover {
+            border-color: rgba(99, 102, 241, 0.25);
+            box-shadow: var(--shadow-card), var(--shadow-glow);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .section-badge {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .section-badge.report { background: var(--accent-indigo-glow); }
+        .section-badge.xray { background: rgba(16, 185, 129, 0.12); }
+        .section-badge.tts { background: rgba(56, 189, 248, 0.12); }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .section-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        /* ============================================
+           Form Elements
+           ============================================ */
+        .file-drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 28px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            background: var(--bg-input);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-drop-zone:hover,
+        .file-drop-zone.dragover {
+            border-color: var(--accent-indigo);
+            background: var(--accent-indigo-glow);
+        }
+
+        .file-drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .drop-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .drop-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .drop-text strong {
+            color: var(--accent-indigo);
+        }
+
+        .file-name {
+            font-size: 13px;
+            color: var(--accent-emerald);
+            margin-top: 8px;
+            display: none;
+        }
+
+        .file-name.visible {
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 14px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color var(--transition);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ============================================
+           Buttons
+           ============================================ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 16px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-emerald {
+            background: var(--gradient-emerald);
+            color: white;
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-emerald:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-sky {
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            color: white;
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-sky:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(56, 189, 248, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        .btn.loading .spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============================================
+           Results
+           ============================================ */
+        .result-area {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-area.visible {
+            display: block;
+            animation: slideUp 0.35s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+        }
+
+        .result-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .result-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .severity-low {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .severity-medium {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .severity-high {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .conditions-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .conditions-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .condition-name {
+            font-weight: 500;
+        }
+
+        .condition-prob {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-amber);
+        }
+
+        .prob-bar {
+            width: 60px;
+            height: 5px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 3px;
+            margin-left: 10px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .prob-bar-fill {
+            height: 100%;
+            background: var(--gradient-amber);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .disclaimer {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+        }
+
+        .no-conditions {
+            color: var(--accent-emerald);
+            font-size: 14px;
+            padding: 8px 0;
+        }
+
+        /* ============================================
+           Audio Player
+           ============================================ */
+        audio {
+            width: 100%;
+            margin-top: 8px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* ============================================
+           Divider between result sections
+           ============================================ */
+        .result-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+            margin: 16px 0;
+        }
+
+        /* ============================================
+           Footer
+           ============================================ */
+        .footer {
+            text-align: center;
+            padding: 24px 0 0;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <div class="container">
+        <!-- =================== HEADER =================== -->
+        <div class="header">
+            <div class="header-icon">🏥</div>
+            <h1>Rural Health Analysis</h1>
+            <p>API Test Console — Development Use Only</p>
+        </div>
+
+        <div class="status-banner">
+            <div class="status-dot"></div>
+            Make sure the Flask server is running on <strong>&nbsp;localhost:5050&nbsp;</strong> before testing
+        </div>
+
+        <!-- =================== SECTION 1: REPORT =================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-badge report">📄</div>
+                <div>
+                    <div class="section-title">Medical Report Analysis</div>
+                    <div class="section-subtitle">POST /analyze-report</div>
+                </div>
+            </div>
+
+            <div class="file-drop-zone" id="report-drop">
+                <input type="file" id="report-file" accept=".jpg,.jpeg,.png,.pdf">
+                <div class="drop-icon">📎</div>
+                <div class="drop-text">Drop a medical report here or <strong>click to browse</strong></div>
+                <div class="drop-text" style="font-size:12px; margin-top:4px;">PDF, JPG, JPEG, PNG — Max 10 MB</div>
+                <div class="file-name" id="report-file-name"></div>
+            </div>
+
+            <button class="btn btn-primary" id="btn-report" onclick="analyzeReport()">
+                <span class="spinner"></span>
+                Analyze Report
+            </button>
+
+            <div class="result-area" id="report-result"></div>
+        </div>
+
+        <!-- =================== SECTION 2: X-RAY =================== -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-badge xray">🩻</div>
+                <div>
+                    <div class="section-title">Chest X-ray Analysis</div>
+                    <div class="section-subtitle">POST /analyze-xray</div>
+                </div>
+            </div>
+
+            <div class="file-drop-zone" id="xray-drop">
+                <input type="file" id="xray-file" accept=".jpg,.jpeg,.png">
+                <div class="drop-icon">📎</div>
+                <div class="drop-text">Drop a chest X-ray here or <strong>click to browse</strong></div>
+                <div class="drop-text" style="font-size:12px; margin-top:4px;">JPG, JPEG, PNG — Max 10 MB</div>
+                <div class="file-name" id="xray-file-name"></div>
+            </div>
+
+            <button class="btn btn-emerald" id="btn-xray" onclick="analyzeXray()">
+                <span class="spinner"></span>
+                Analyze X-ray
+            </button>
+
+            <div class="result-area" id="xray-result"></div>
+        </div>
+
+
+    <script>
+        /* ============================================
+           Configuration
+           ============================================ */
+        const API_BASE = "http://localhost:5050";
+
+        /* ============================================
+           File Input Handlers
+           ============================================ */
+        // Show selected file name for report input
+        document.getElementById("report-file").addEventListener("change", function () {
+            const nameEl = document.getElementById("report-file-name");
+            if (this.files.length > 0) {
+                nameEl.textContent = "✓ " + this.files[0].name;
+                nameEl.classList.add("visible");
+            } else {
+                nameEl.classList.remove("visible");
+            }
+        });
+
+        // Show selected file name for X-ray input
+        document.getElementById("xray-file").addEventListener("change", function () {
+            const nameEl = document.getElementById("xray-file-name");
+            if (this.files.length > 0) {
+                nameEl.textContent = "✓ " + this.files[0].name;
+                nameEl.classList.add("visible");
+            } else {
+                nameEl.classList.remove("visible");
+            }
+        });
+
+        // Drag-and-drop highlight effect
+        document.querySelectorAll(".file-drop-zone").forEach(zone => {
+            zone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                zone.classList.add("dragover");
+            });
+            zone.addEventListener("dragleave", () => {
+                zone.classList.remove("dragover");
+            });
+            zone.addEventListener("drop", () => {
+                zone.classList.remove("dragover");
+            });
+        });
+
+        /* ============================================
+           Button Loading State Helpers
+           ============================================ */
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            if (loading) {
+                btn.classList.add("loading");
+                btn.disabled = true;
+            } else {
+                btn.classList.remove("loading");
+                btn.disabled = false;
+            }
+        }
+
+        function showResult(containerId, html) {
+            const el = document.getElementById(containerId);
+            el.innerHTML = html;
+            el.classList.add("visible");
+        }
+
+        /* ============================================
+           ENDPOINT 1: Analyze Report
+           ============================================ */
+        async function analyzeReport() {
+            const fileInput = document.getElementById("report-file");
+            if (!fileInput.files.length) {
+                showResult("report-result", '<div class="error-msg">Please select a file first.</div>');
+                return;
+            }
+
+            setLoading("btn-report", true);
+            showResult("report-result", '<div class="result-card"><div class="result-text" style="color:var(--text-secondary)">⏳ Analyzing report — this may take a moment...</div></div>');
+
+            try {
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+
+                const response = await fetch(API_BASE + "/analyze-report", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const sevClass = "severity-" + data.severity.toLowerCase();
+                    showResult("report-result", `
+                        <div class="result-card">
+                            <div class="result-label">Severity</div>
+                            <span class="severity-badge ${sevClass}">${data.severity}</span>
+
+                            <div class="result-divider"></div>
+
+                            <div class="result-label">Hindi Explanation</div>
+                            <div class="result-text">${escapeHtml(data.hindi_explanation)}</div>
+
+                            <div class="disclaimer">⚕️ ${escapeHtml(data.disclaimer)}</div>
+                        </div>
+                    `);
+                } else {
+                    showResult("report-result", `<div class="error-msg">❌ ${escapeHtml(data.error)}</div>`);
+                }
+            } catch (err) {
+                showResult("report-result", `<div class="error-msg">❌ Connection failed. Is the Flask server running on port 5050?<br><small>${escapeHtml(err.message)}</small></div>`);
+            } finally {
+                setLoading("btn-report", false);
+            }
+        }
+
+        /* ============================================
+           ENDPOINT 2: Analyze X-ray
+           ============================================ */
+        async function analyzeXray() {
+            const fileInput = document.getElementById("xray-file");
+            if (!fileInput.files.length) {
+                showResult("xray-result", '<div class="error-msg">Please select a file first.</div>');
+                return;
+            }
+
+            setLoading("btn-xray", true);
+            showResult("xray-result", '<div class="result-card"><div class="result-text" style="color:var(--text-secondary)">⏳ Analyzing X-ray — this may take a moment...</div></div>');
+
+            try {
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+
+                const response = await fetch(API_BASE + "/analyze-xray", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let conditionsHtml = "";
+                    if (data.detected_conditions && data.detected_conditions.length > 0) {
+                        const items = data.detected_conditions.map(c => {
+                            const pct = (c.probability * 100).toFixed(1);
+                            return `<li>
+                                <span class="condition-name">${escapeHtml(c.condition)}</span>
+                                <span>
+                                    <span class="condition-prob">${pct}%</span>
+                                    <span class="prob-bar"><span class="prob-bar-fill" style="width:${pct}%"></span></span>
+                                </span>
+                            </li>`;
+                        }).join("");
+                        conditionsHtml = `<ul class="conditions-list">${items}</ul>`;
+                    } else {
+                        conditionsHtml = '<div class="no-conditions">✅ No major conditions detected above the threshold.</div>';
+                    }
+
+                    showResult("xray-result", `
+                        <div class="result-card">
+                            <div class="result-label">Detected Conditions</div>
+                            ${conditionsHtml}
+
+                            <div class="result-divider"></div>
+
+                            <div class="result-label">Hindi Explanation</div>
+                            <div class="result-text">${escapeHtml(data.hindi_explanation)}</div>
+
+                            <div class="disclaimer">⚕️ ${escapeHtml(data.disclaimer)}</div>
+                        </div>
+                    `);
+                } else {
+                    showResult("xray-result", `<div class="error-msg">❌ ${escapeHtml(data.error)}</div>`);
+                }
+            } catch (err) {
+                showResult("xray-result", `<div class="error-msg">❌ Connection failed. Is the Flask server running on port 5050?<br><small>${escapeHtml(err.message)}</small></div>`);
+            } finally {
+                setLoading("btn-xray", false);
+            }
+        }
+
+
+        /* ============================================
+           Utility: Escape HTML to prevent XSS
+           ============================================ */
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+
